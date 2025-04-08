@@ -170,7 +170,10 @@ To add support for a new wallet:
 For more detailed documentation on the Aleo blockchain and wallet integration, visit:
 
 - [Aleo Developer Documentation](https://developer.aleo.org/)
-- [Aleo Wallet Documentation](https://developer.aleo.org/wallet/)
+- [Aleo Adapters Documentation](https://github.com/arcane-finance-defi/aleo-wallet-adapters)
+- [Puzzle SDK Documentation](https://docs.puzzle.online/)
+- [Leo Adapter Documentation](https://github.com/demox-labs/aleo-wallet-adapter)
+
 
 ## 🤝 Contributing
 
