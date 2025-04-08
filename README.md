@@ -1,3 +1,4 @@
+```
 # Snark Collective - Aleo Wallet Integration Template
 
 A modern, responsive React application template for integrating Aleo wallets into your dApp. This template provides a complete foundation for building decentralized applications on the Aleo blockchain with a focus on user experience and developer productivity.
@@ -53,16 +54,15 @@ snarkcollective/
 ├── public/              # Static assets
 ├── src/
 │   ├── assets/          # Images and other assets
+│   ├── components/      # UI components
 │   │   ├── ConnectWallet.tsx  # Wallet connection component
 │   │   ├── Header.tsx         # Application header
 │   │   ├── Footer.tsx         # Application footer
 │   │   ├── Layout.tsx         # Main layout wrapper
-│   │   └── WalletHooksDemo.tsx # Demo of wallet hooks
+│   │   └── WalletDemo.tsx     # Demo of wallet integration
 │   ├── contexts/        # React contexts
 │   │   ├── WalletContext.tsx  # Wallet state management
 │   │   └── ThemeContext.tsx   # Theme state management
-│   ├── pages/           # Page components
-│   ├── App.tsx          # Main application component
 │   ├── main.tsx         # Application entry point
 │   └── index.css        # Global styles
 ├── index.html           # HTML template
@@ -125,6 +125,17 @@ function App() {
 }
 ```
 
+### WalletDemo Component
+
+The `WalletDemo` component showcases how to use the `WalletContext` to display wallet connection state, including:
+
+- Connection status
+- Wallet information
+- Error messages
+- Connection logs
+
+This component serves as a reference implementation for how to consume the wallet context in your application.
+
 ## 🔧 Customization
 
 ### Styling
@@ -185,3 +196,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 Built with ❤️ by the Snark Collective team
+```
