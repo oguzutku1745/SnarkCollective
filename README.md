@@ -1,85 +1,187 @@
-# React + Aleo + Leo
+# Snark Collective - Aleo Wallet Integration Template
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/ProvableHQ/sdk/tree/mainnet/create-leo-app/template-react)
+A modern, responsive React application template for integrating Aleo wallets into your dApp. This template provides a complete foundation for building decentralized applications on the Aleo blockchain with a focus on user experience and developer productivity.
 
-This template provides a minimal setup to get React and Aleo working in Webpack or Vite with HMR and some ESLint rules.
+![Snark Collective](https://via.placeholder.com/800x400?text=Snark+Collective)
 
-This template includes a Leo program that is loaded by the web app located in
-the `helloworld` directory.
+## 🚀 Features
 
-### Start in development mode
+- **Multi-Wallet Support**: Seamlessly integrate with multiple Aleo wallets including Puzzle, Leo, Fox, and Soter
+- **Modern UI/UX**: Clean, responsive design built with Tailwind CSS
+- **Dark Mode**: Built-in dark mode support with smooth transitions
+- **Wallet Context**: Centralized wallet state management with React Context
+- **TypeScript**: Full TypeScript support for better developer experience
+- **Vite**: Lightning-fast development and build times
+- **React 18**: Built on the latest React features
 
-```bash
-npm run dev
-```
+## 📋 Prerequisites
 
-Your app should be running on http://localhost:5173/
+- Node.js (v16+)
+- npm or yarn
+- An Aleo wallet (Puzzle, Leo, Fox, or Soter)
 
-### Build Leo program
+## 🛠️ Getting Started
 
-1. Copy the `helloworld/.env.example` to `helloworld/.env` (this will be ignored
-   by Git):
+### Installation
 
+1. Clone the repository:
    ```bash
-   cd helloworld
-   cp .env.example .env
+   git clone https://github.com/oguzutku1745/snarkcollective.git
+   cd snarkcollective
    ```
 
-2. Replace `PRIVATE_KEY=user1PrivateKey` in the `.env` with your own key (you
-   can use an existing one or generate your own at https://provable.tools/account)
-
-3. Follow instructions to install Leo here: https://github.com/ProvableHQ/leo
-
-4. You can edit `helloworld/src/main.leo` and run `leo run` to compile and update the
-   Aleo instructions under `build` which are loaded by the web app.
-
-## Deploy program from web app
-
-> [!WARNING]
-> This is for demonstration purposes or local testing only, in production applications you
-> should avoid building a public facing web app with private key information
-
-Information on generating a private key, seeding a wallet with funds, and finding a spendable record can be found here
-if you are unfamiliar: https://docs.leo-lang.org/testnet/getting_started/deploy_execute_demo
-
-Aleo programs deployed require unique names, make sure to edit the program's name to something unique in `helloworld/src/main.leo`, `helloworld/program.json`, rename `helloworld/inputs/helloworld.in` and rebuild.
-
-1. In the `worker.js` file modify the privateKey to be an account with available
-   funds
-
-   ```js
-   // Use existing account with funds
-   const account = new Account({
-     privateKey: "user1PrivateKey",
-   });
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn
    ```
 
-2. (Optional) Provide a fee record manually (located in commented code within `worker.js`)
+3. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-   If you do not provide a manual fee record, the SDK will attempt to scan for a record starting at the latest block. A simple way to speed this up would be to make a public transaction to this account right before deploying.
+4. Open your browser and navigate to `http://localhost:5173`
 
-3. Run the web app and hit the deploy button
-
-## Production deployment
-
-### Build
-
-`npm run build`
-
-Upload `dist` folder to your host of choice.
-
-### ⚠️ Header warnings
-
-`DOMException: Failed to execute 'postMessage' on 'Worker': SharedArrayBuffer transfer requires self.crossOriginIsolated`
-
-If you get a warning similar to this when deploying your application, you need
-to make sure your web server is configured with the following headers:
+## 🧩 Project Structure
 
 ```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
+snarkcollective/
+├── public/              # Static assets
+├── src/
+│   ├── assets/          # Images and other assets
+│   │   ├── ConnectWallet.tsx  # Wallet connection component
+│   │   ├── Header.tsx         # Application header
+│   │   ├── Footer.tsx         # Application footer
+│   │   ├── Layout.tsx         # Main layout wrapper
+│   │   └── WalletHooksDemo.tsx # Demo of wallet hooks
+│   ├── contexts/        # React contexts
+│   │   ├── WalletContext.tsx  # Wallet state management
+│   │   └── ThemeContext.tsx   # Theme state management
+│   ├── pages/           # Page components
+│   ├── App.tsx          # Main application component
+│   ├── main.tsx         # Application entry point
+│   └── index.css        # Global styles
+├── index.html           # HTML template
+├── package.json         # Dependencies and scripts
+├── tsconfig.json        # TypeScript configuration
+└── vite.config.ts       # Vite configuration
 ```
 
-We've included a `_headers` file that works with some web hosts (e.g. Netlify)
-but depending on your host / server setup you may need to configure the headers
-manually.
+## 💼 Key Components
+
+### WalletContext
+
+The `WalletContext` provides a centralized way to manage wallet connections across your application. It handles:
+
+- Wallet connection and disconnection
+- Connection state tracking
+- Error handling
+- Wallet selection
+
+```tsx
+// Example usage in a component
+import { useWallet } from '../contexts/WalletContext';
+
+function MyComponent() {
+  const { 
+    connected, 
+    connecting, 
+    address, 
+    walletName, 
+    connectWallet, 
+    disconnectWallet 
+  } = useWallet();
+  
+  // Use wallet state and methods
+}
+```
+
+### ConnectWallet Component
+
+The `ConnectWallet` component provides a ready-to-use UI for connecting to Aleo wallets. It includes:
+
+- Wallet selection modal
+- Connection status indicators
+- Error handling
+- Responsive design
+
+```tsx
+// Example usage
+import { ConnectWallet } from './components/ConnectWallet';
+
+function App() {
+  return (
+    <div>
+      <ConnectWallet 
+        buttonText="Connect Your Wallet" 
+        modalTitle="Choose Your Wallet" 
+      />
+    </div>
+  );
+}
+```
+
+## 🔧 Customization
+
+### Styling
+
+The template uses Tailwind CSS for styling. You can customize the theme by modifying the `tailwind.config.js` file:
+
+```js
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // Add your custom colors
+      },
+      // Add other theme customizations
+    },
+  },
+  // ...
+};
+```
+
+### Adding New Wallets
+
+To add support for a new wallet:
+
+1. Update the `WalletContext.tsx` file to include the new wallet's connection logic
+2. Add the wallet's icon to the `assets` directory
+3. Update the `ConnectWallet.tsx` component to include the new wallet option
+
+## 📚 Documentation
+
+For more detailed documentation on the Aleo blockchain and wallet integration, visit:
+
+- [Aleo Developer Documentation](https://developer.aleo.org/)
+- [Aleo Wallet Documentation](https://developer.aleo.org/wallet/)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- [Aleo](https://aleo.org/) for building the Aleo blockchain
+- [React](https://reactjs.org/) for the amazing frontend library
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
+- [Vite](https://vitejs.dev/) for the fast build tool
+
+---
+
+Built with ❤️ by the Snark Collective team

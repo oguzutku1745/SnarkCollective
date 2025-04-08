@@ -1,12 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as PuzzleSDK from '@puzzlehq/sdk';
-import {
-  WalletProvider as AleoWalletProvider,
-  useConnect,
-  useDisconnect,
-  useAccount,
-  useSelect
-} from 'aleo-hooks';
 import {
   DecryptPermission,
   WalletAdapterNetwork as DemoxWalletAdapterNetwork
@@ -56,11 +49,7 @@ const WalletContext = createContext<WalletContextType>({
   disconnectWallet: async () => {},
 });
 
-// Initialize other wallet adapters here, outside the component
-const leoAdapter = new LeoWalletAdapter({
-  appName: "Snark Collective"
-});
-
+// Initialize wallet adapters
 const foxAdapter = new FoxWalletAdapter({ 
   appName: "Snark Collective" 
 });
@@ -71,7 +60,7 @@ const soterAdapter = new SoterWalletAdapter({
 
 // Create the provider component
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [selected, setSelected] = useState<boolean>(false);
+  // State variables
   const [connectionLogs, setConnectionLogs] = useState<ConnectionLog[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
@@ -88,6 +77,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const updatedLogs = [newLog, ...prevLogs].slice(0, 10);
       return updatedLogs;
     });
+  };
+
+  // Reset state function
+  const resetState = () => {
+    setAddress(null);
+    setConnected(false);
+    setWalletName(null);
+    setUsingPuzzle(false);
+  };
+
+  // Handle connection errors
+  const handleConnectionError = (error: any, walletDisplayName: string) => {
+    console.error(`${walletDisplayName} connection error:`, error);
+    setErrorMessage(`${walletDisplayName} error: ${error?.message || "Unknown error"}`);
+    addLog(`${walletDisplayName} connection error: ${error?.message || "Unknown error"}`);
   };
 
   // Initial connection check for Puzzle wallet with multiple retry attempts
@@ -136,13 +140,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setTimeout(async () => {
             const connected = await checkConnection();
             if (connected) {
-              addLog('Connection detected after delay!', {
-                account: {
-                  address: address,
-                  network: 'AleoTestnet',
-                  shortenedAddress: address ? `(...${address.slice(-5)})` : '(...)'
-                }
-              });
+              addLog('Connection detected after delay!');
             }
           }, finalCheckDelay);
         }
@@ -159,7 +157,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       setErrorMessage(null);
       setConnecting(true);
-      setSelected(true);
       setUsingPuzzle(true);
       
       addLog('Connecting to Puzzle using SDK...');
@@ -170,7 +167,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (existingAccount && existingAccount.account && existingAccount.account.address) {
           setAddress(existingAccount.account.address);
           setConnected(true);
-          setWalletName('Puzzle Wallet (SDK)');
+          setWalletName('Puzzle Wallet');
           addLog('Already connected to Puzzle', existingAccount);
           return;
         }
@@ -203,7 +200,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             if (accountResponse && accountResponse.account && accountResponse.account.address) {
               setAddress(accountResponse.account.address);
               setConnected(true);
-              setWalletName('Puzzle Wallet (SDK)');
+              setWalletName('Puzzle Wallet');
               addLog('Connected successfully to Puzzle', accountResponse);
               return true;
             }
@@ -231,7 +228,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             if (accountResponse && accountResponse.account && accountResponse.account.address) {
               setAddress(accountResponse.account.address);
               setConnected(true);
-              setWalletName('Puzzle Wallet (SDK)');
+              setWalletName('Puzzle Wallet');
               addLog('Connection detected after delay!', accountResponse);
             }
           } catch (e) {
@@ -241,9 +238,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
       
     } catch (error: any) {
-      console.error("Puzzle SDK connection error:", error);
-      setErrorMessage(error?.message || "Failed to connect to Puzzle Wallet");
-      addLog(`Puzzle SDK connection error: ${error?.message || "Unknown error"}`);
+      handleConnectionError(error, "Puzzle Wallet");
     } finally {
       setConnecting(false);
     }
@@ -271,7 +266,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             return;
           }
         } catch (directError: any) {
-          console.error("Direct Leo wallet error:", directError);
           addLog(`Direct Leo wallet error: ${directError?.message || "Unknown error"}`);
         }
       } else {
@@ -306,13 +300,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           throw new Error("Could not get Leo wallet public key");
         }
       } catch (error: any) {
-        console.error("Leo wallet adapter error:", error);
-        setErrorMessage("Leo wallet error: " + (error?.message || "Unknown error"));
-        addLog(`Leo connection error: ${error?.message || "Unknown error"}`);
+        handleConnectionError(error, "Leo Wallet");
         
         // More detailed error for the user
-        if (error.message && error.message.includes("not detected") || 
-            error.message && error.message.includes("INVALID_PARAMS")) {
+        if (error.message && (error.message.includes("not detected") || 
+            error.message.includes("INVALID_PARAMS"))) {
           addLog("Make sure Leo wallet is installed and unlocked. Visit https://leo.app/ to install.");
         }
       }
@@ -351,53 +343,29 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           throw new Error(`Could not get ${displayName} public key`);
         }
       } catch (error: any) {
-        console.error(`${displayName} connection error:`, error);
-        setErrorMessage(`${displayName} error: ${error?.message || "Unknown error"}`);
-        addLog(`${displayName} connection error: ${error?.message || "Unknown error"}`);
+        handleConnectionError(error, displayName);
       }
     } finally {
       setConnecting(false);
     }
   };
 
-  // Disconnect from Puzzle using SDK
-  const disconnectPuzzleSDK = async () => {
-    try {
-      setErrorMessage(null);
-      addLog("Disconnecting from Puzzle...");
-      
-      try {
-        await PuzzleSDK.disconnect();
-      } catch (e) {
-        // Ignore disconnect errors and continue
-      }
-      
-      setSelected(false);
-      setAddress(null);
-      setConnected(false);
-      setWalletName(null);
-      setUsingPuzzle(false);
-      addLog("Disconnected successfully from Puzzle");
-    } catch (error: any) {
-      console.error("Disconnection error:", error);
-      setErrorMessage(error?.message || "Failed to disconnect");
-      addLog(`Disconnection error: ${error?.message || "Unknown error"}`);
-    }
-  };
-
-  // Disconnect from other wallets
-  const disconnectOtherWallet = async () => {
+  // Disconnect from wallet
+  const disconnectWallet = async () => {
     try {
       setErrorMessage(null);
       addLog("Disconnecting from wallet...");
       
-      // Try to disconnect from adapters if needed
+      if (usingPuzzle) {
+        try {
+          await PuzzleSDK.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors and continue
+        }
+      }
       
-      setSelected(false);
-      setAddress(null);
-      setConnected(false);
-      setWalletName(null);
-      setUsingPuzzle(false);
+      // Reset all state
+      resetState();
       addLog("Disconnected successfully");
     } catch (error: any) {
       console.error("Disconnection error:", error);
@@ -421,15 +389,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       case 'soter':
         await connectOtherWallet('soter');
         break;
-    }
-  };
-
-  // Main disconnect wallet method
-  const disconnectWallet = async () => {
-    if (usingPuzzle) {
-      await disconnectPuzzleSDK();
-    } else {
-      await disconnectOtherWallet();
     }
   };
 

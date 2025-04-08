@@ -73,6 +73,16 @@ export function ConnectWallet({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRootRef = useRef<HTMLDivElement | null>(null);
   const { connected, connecting, address, walletName, connectWallet, disconnectWallet } = useWallet();
+  
+  // Use refs to track the latest state values for use in intervals/timeouts
+  const connectedRef = useRef(connected);
+  const connectingRef = useRef(connecting);
+  
+  // Keep refs updated with latest values
+  useEffect(() => {
+    connectedRef.current = connected;
+    connectingRef.current = connecting;
+  }, [connected, connecting]);
 
   // Create portal root if needed
   useEffect(() => {
@@ -93,11 +103,6 @@ export function ConnectWallet({
       }
     };
   }, []);
-
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log('Modal state:', { isOpen, connected, connecting });
-  }, [isOpen, connected, connecting]);
 
   // Function to shorten address for display
   const shortenAddress = (addr: string | null) => {
@@ -161,23 +166,41 @@ export function ConnectWallet({
 
   // Clear connecting state when modal closes or connection status changes
   useEffect(() => {
-    if (!isOpen || connected) {
+    if (!isOpen) {
+      setConnectingWalletId(null);
+    }
+    
+    // When connection becomes successful, clear the connectingWalletId
+    if (connected) {
       setConnectingWalletId(null);
     }
   }, [isOpen, connected]);
 
-  // Also reset connecting state when component unmounts
+  // Track connection state changes
+  const [previousConnectingState, setPreviousConnectingState] = useState(connecting);
+  const [previousConnectedState, setPreviousConnectedState] = useState(connected);
+  
+  // This effect only runs when the connection state transitions
   useEffect(() => {
-    return () => {
-      setConnectingWalletId(null);
-    };
-  }, []);
+    // Check if connecting state changed from true to false and connected changed from false to true
+    // This indicates a successful connection completion
+    if (previousConnectingState && !connecting && !previousConnectedState && connected) {
+      // Force close the modal when connection is successful
+      setTimeout(() => {
+        forceCloseModal();
+      }, 500);
+    }
+    
+    // Update previous states for the next comparison
+    setPreviousConnectingState(connecting);
+    setPreviousConnectedState(connected);
+  }, [connecting, connected]);
 
   const handleOpen = () => {
     if (connected) {
+      // If already connected, clicking the wallet button should toggle the dropdown menu
       setIsDropdownOpen(!isDropdownOpen);
     } else {
-      console.log('Opening wallet modal');
       setIsOpen(true);
       // Force body to not scroll when modal is open
       document.body.style.overflow = 'hidden';
@@ -185,18 +208,86 @@ export function ConnectWallet({
   };
 
   const handleClose = () => {
-    console.log('Closing wallet modal');
+    // Don't allow closing the modal if actively connecting (but allow if connected)
+    if (connecting && !connected) {
+      return;
+    }
+    
     setIsOpen(false);
     // Restore scrolling
+    document.body.style.overflow = '';
+  };
+  
+  // A force close method that bypasses all checks
+  const forceCloseModal = () => {
+    setIsOpen(false);
+    setConnectingWalletId(null);
     document.body.style.overflow = '';
   };
 
   const handleConnect = async (walletId: 'puzzle' | 'leo' | 'fox' | 'soter') => {
     setConnectingWalletId(walletId);
-    await connectWallet(walletId);
-    // Only close the modal if successfully connected
-    if (!connecting) {
-      handleClose();
+    
+    // Special handling for Puzzle wallet which needs more time
+    if (walletId === 'puzzle') {
+      try {
+        // Start connection process
+        await connectWallet(walletId);
+        
+        let autoCloseTimeout: NodeJS.Timeout;
+        
+        // Use a timeout to check the connection status periodically
+        const connectionCheckInterval = setInterval(() => {
+          // Access the latest state values through refs
+          const isNowConnected = connectedRef.current;
+          const isStillConnecting = connectingRef.current;
+          
+          // If connected is true, clear the interval and close the modal
+          if (isNowConnected) {
+            clearInterval(connectionCheckInterval);
+            clearTimeout(autoCloseTimeout);
+            
+            // Use the force close method
+            forceCloseModal();
+            return;
+          }
+          
+          // If no longer connecting and not connected, something went wrong
+          if (!isStillConnecting && !isNowConnected) {
+            clearInterval(connectionCheckInterval);
+            clearTimeout(autoCloseTimeout);
+            setConnectingWalletId(null);
+          }
+        }, 1000);
+        
+        // Set a timeout to force close the modal after 10 seconds if we're connected
+        // This handles cases where the interval might not detect the connection
+        autoCloseTimeout = setTimeout(() => {
+          clearInterval(connectionCheckInterval);
+          
+          // Check one last time if connected before giving up
+          if (connectedRef.current) {
+            forceCloseModal();
+          } else {
+            setConnectingWalletId(null);
+          }
+        }, 10000);
+        
+        return () => {
+          clearInterval(connectionCheckInterval);
+          clearTimeout(autoCloseTimeout);
+        };
+      } catch (error) {
+        setConnectingWalletId(null);
+      }
+    } else {
+      // For other wallets, use the original approach
+      await connectWallet(walletId);
+      // Always close the modal after attempting to connect, regardless of success
+      // The connected state will be updated by the context
+      setTimeout(() => {
+        forceCloseModal();
+      }, 500);
     }
   };
 
@@ -208,6 +299,8 @@ export function ConnectWallet({
   const handleChangeWallet = () => {
     setIsDropdownOpen(false);
     setIsOpen(true);
+    // Force body to not scroll when modal is open
+    document.body.style.overflow = 'hidden';
   };
 
   // Find the wallet icon to display in the button
@@ -240,8 +333,10 @@ export function ConnectWallet({
         className="fixed inset-0 bg-black/50 flex justify-center items-center z-[9999]" 
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         onClick={(e) => {
-          // Close when clicking outside of modal content
-          if (e.target === e.currentTarget) handleClose();
+          // Only close when clicking outside of modal content and not connecting
+          if (e.target === e.currentTarget && !connecting && !connectingWalletId) {
+            handleClose();
+          }
         }}
       >
         <div 
@@ -259,8 +354,13 @@ export function ConnectWallet({
               )}
             </h2>
             <button 
-              className="bg-transparent border-none text-xl text-gray-500 dark:text-gray-400 cursor-pointer p-0 flex items-center justify-center w-7 h-7 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-300"
+              className={`bg-transparent border-none text-xl cursor-pointer p-0 flex items-center justify-center w-7 h-7 rounded-full ${
+                connecting || connectingWalletId
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-300'
+              }`}
               onClick={handleClose}
+              disabled={connecting || !!connectingWalletId}
             >
               ×
             </button>
