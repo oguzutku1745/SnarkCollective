@@ -1,12 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as PuzzleSDK from '@puzzlehq/sdk';
-import {
-  WalletProvider as AleoWalletProvider,
-  useConnect,
-  useDisconnect,
-  useAccount,
-  useSelect
-} from 'aleo-hooks';
 import {
   DecryptPermission,
   WalletAdapterNetwork as DemoxWalletAdapterNetwork
@@ -56,10 +49,6 @@ const WalletContext = createContext<WalletContextType>({
   disconnectWallet: async () => {},
 });
 
-// Initialize other wallet adapters here, outside the component
-const leoAdapter = new LeoWalletAdapter({
-  appName: "Snark Collective"
-});
 
 const foxAdapter = new FoxWalletAdapter({ 
   appName: "Snark Collective" 
@@ -170,7 +159,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (existingAccount && existingAccount.account && existingAccount.account.address) {
           setAddress(existingAccount.account.address);
           setConnected(true);
-          setWalletName('Puzzle Wallet (SDK)');
+          setWalletName('Puzzle Wallet');
           addLog('Already connected to Puzzle', existingAccount);
           return;
         }
@@ -203,7 +192,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             if (accountResponse && accountResponse.account && accountResponse.account.address) {
               setAddress(accountResponse.account.address);
               setConnected(true);
-              setWalletName('Puzzle Wallet (SDK)');
+              setWalletName('Puzzle Wallet');
               addLog('Connected successfully to Puzzle', accountResponse);
               return true;
             }
@@ -231,7 +220,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             if (accountResponse && accountResponse.account && accountResponse.account.address) {
               setAddress(accountResponse.account.address);
               setConnected(true);
-              setWalletName('Puzzle Wallet (SDK)');
+              setWalletName('Puzzle Wallet');
               addLog('Connection detected after delay!', accountResponse);
             }
           } catch (e) {
