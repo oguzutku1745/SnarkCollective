@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 
 // Import wallet images
@@ -14,7 +14,7 @@ interface Wallet {
   icon: string;
 }
 
-export function WalletHooksDemo() {
+export function WalletDemo() {
   // State for UI
   const [selectedWallet, setSelectedWallet] = useState<'puzzle' | 'leo' | 'fox' | 'soter' | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('');
@@ -27,8 +27,6 @@ export function WalletHooksDemo() {
     connecting, 
     address, 
     walletName, 
-    connectWallet, 
-    disconnectWallet,
     errorMessage,
     connectionLogs
   } = useWallet();
@@ -69,52 +67,10 @@ export function WalletHooksDemo() {
     }
   }, [connected, connecting]);
 
-  // Handle wallet selection
-  const handleSelectWallet = (walletId: 'puzzle' | 'leo' | 'fox' | 'soter') => {
-    setSelectedWallet(walletId);
-    setConnectionStatus('Wallet selected');
-    setLastError(null);
-  };
-
-  // Handle connect button click
-  const handleConnect = async () => {
-    try {
-      setLastError(null);
-      if (selectedWallet) {
-        console.log(`Attempting to connect to ${selectedWallet} wallet...`);
-        await connectWallet(selectedWallet);
-        
-        // Check connection status after a delay
-        setTimeout(() => {
-          if (!connected && !connecting) {
-            console.log('Connection attempt timed out or failed');
-            setConnectionStatus('Connection failed or timed out');
-          }
-        }, 10000);
-      } else {
-        setConnectionStatus('Please select a wallet first');
-      }
-    } catch (error: any) {
-      console.error('Connection error:', error);
-      setLastError(error?.message || 'Unknown error');
-      setConnectionStatus(`Error connecting: ${error?.message || 'Unknown error'}`);
-    }
-  };
-
-  // Handle disconnect button click
-  const handleDisconnect = async () => {
-    try {
-      await disconnectWallet();
-    } catch (error: any) {
-      console.error('Disconnection error:', error);
-      setLastError(error?.message || 'Unknown error');
-      setConnectionStatus(`Error disconnecting: ${error?.message || 'Unknown error'}`);
-    }
-  };
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm w-full">
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Aleo Hooks Demo</h2>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Wallet Integration Demo</h2>
       
       
       {/* Connection Status */}

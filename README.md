@@ -26,7 +26,7 @@ A modern, responsive React application template for integrating Aleo wallets int
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/snarkcollective.git
+   git clone https://github.com/oguzutku1745/snarkcollective.git
    cd snarkcollective
    ```
 
