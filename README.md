@@ -1,4 +1,3 @@
-```
 # Snark Collective - Aleo Wallet Integration Template
 
 A modern, responsive React application template for integrating Aleo wallets into your dApp. This template provides a complete foundation for building decentralized applications on the Aleo blockchain with a focus on user experience and developer productivity.
@@ -8,6 +7,7 @@ A modern, responsive React application template for integrating Aleo wallets int
 ## 🚀 Features
 
 - **Multi-Wallet Support**: Seamlessly integrate with multiple Aleo wallets including Puzzle, Leo, Fox, and Soter
+- **Complete Transaction API**: Unified interface for creating transactions across all supported wallet types
 - **Modern UI/UX**: Clean, responsive design built with Tailwind CSS
 - **Dark Mode**: Built-in dark mode support with smooth transitions
 - **Wallet Context**: Centralized wallet state management with React Context
@@ -81,6 +81,7 @@ The `WalletContext` provides a centralized way to manage wallet connections acro
 - Connection state tracking
 - Error handling
 - Wallet selection
+- Transaction creation with a unified API for all supported wallets
 
 ```tsx
 // Example usage in a component
@@ -93,10 +94,25 @@ function MyComponent() {
     address, 
     walletName, 
     connectWallet, 
-    disconnectWallet 
+    disconnectWallet,
+    createTransaction 
   } = useWallet();
   
-  // Use wallet state and methods
+  // Create a transaction that works with any supported wallet
+  const handleTransaction = async () => {
+    if (connected) {
+      const result = await createTransaction({
+        programId: 'credits.aleo',
+        functionName: 'transfer',
+        inputs: ['aleo1abc...', '1000000u64'],
+        fee: 3000
+      });
+      
+      if (result.transactionId) {
+        console.log(`Transaction submitted: ${result.transactionId}`);
+      }
+    }
+  };
 }
 ```
 
@@ -127,14 +143,15 @@ function App() {
 
 ### WalletDemo Component
 
-The `WalletDemo` component showcases how to use the `WalletContext` to display wallet connection state, including:
+The `WalletDemo` component showcases how to use the `WalletContext` to display wallet connection state and create transactions, including:
 
 - Connection status
 - Wallet information
+- Transaction creation demo for all supported wallets (Puzzle, Leo, Fox, Soter)
 - Error messages
 - Connection logs
 
-This component serves as a reference implementation for how to consume the wallet context in your application.
+This component serves as a reference implementation for how to consume the wallet context and create transactions in your application, regardless of the wallet type.
 
 ## 🔧 Customization
 
@@ -164,6 +181,7 @@ To add support for a new wallet:
 1. Update the `WalletContext.tsx` file to include the new wallet's connection logic
 2. Add the wallet's icon to the `assets` directory
 3. Update the `ConnectWallet.tsx` component to include the new wallet option
+4. Implement transaction handling for the new wallet in the `createTransaction` method
 
 ## 📚 Documentation
 
@@ -173,7 +191,6 @@ For more detailed documentation on the Aleo blockchain and wallet integration, v
 - [Aleo Adapters Documentation](https://github.com/arcane-finance-defi/aleo-wallet-adapters)
 - [Puzzle SDK Documentation](https://docs.puzzle.online/)
 - [Leo Adapter Documentation](https://github.com/demox-labs/aleo-wallet-adapter)
-
 
 ## 🤝 Contributing
 
@@ -199,4 +216,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 Built with ❤️ by the Snark Collective team
-```
