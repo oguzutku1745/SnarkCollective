@@ -229,6 +229,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     addLog(`${walletDisplayName} connection error: ${error?.message || "Unknown error"}`);
   };
 
+  // Handle operation errors (generalized error handler for all wallet operations)
+  const handleOperationError = (error: any, operationType: string) => {
+    const errorMsg = error?.message || `Unknown error during ${operationType}`;
+    setErrorMessage(`${operationType} error: ${errorMsg}`);
+    addLog(`${operationType} error: ${errorMsg}`);
+    return { error: errorMsg };
+  };
+
   // Initial connection check for Puzzle wallet with multiple retry attempts
   useEffect(() => {
     let attemptCount = 0;
@@ -572,13 +580,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setLastTransactionId(txId || null);
         addLog(`Puzzle transaction created successfully with ID: ${txId}`);
         return { transactionId: txId };
-      } else if (walletName === 'Leo Wallet' && leoWalletAdapter) {
-        // Use Leo wallet adapter for transaction
-        addLog(`Creating Leo wallet transaction with inputs: ${JSON.stringify(inputs)}`);
+      } else if ((walletName === 'Leo Wallet' && leoWalletAdapter) || 
+                 (walletName === 'Fox Wallet' && foxWalletAdapter) || 
+                 (walletName === 'Soter Wallet' && soterWalletAdapter)) {
+        // Common pattern for all wallet adapters
+        const adapter = walletName === 'Leo Wallet' ? leoWalletAdapter : 
+                       walletName === 'Fox Wallet' ? foxWalletAdapter : 
+                       soterWalletAdapter;
+        
+        // Select the correct network enum
+        const network = walletName === 'Leo Wallet' ? 
+                      DemoxWalletAdapterNetwork.TestnetBeta : 
+                      DemoxWalletAdapterNetwork.Testnet;
+        
+        addLog(`Creating ${walletName} transaction with inputs: ${JSON.stringify(inputs)}`);
 
         const transaction = Transaction.createTransaction(
           address,
-          DemoxWalletAdapterNetwork.TestnetBeta,
+          network,
           programId,
           functionName,
           inputs,
@@ -586,45 +605,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           false
         );
 
-        const txId = await leoWalletAdapter.requestTransaction(transaction);
+        const txId = await adapter!.requestTransaction(transaction);
         setLastTransactionId(txId);
-        addLog(`Leo wallet transaction created successfully with ID: ${txId}`);
-        return { transactionId: txId };
-      } else if (walletName === 'Fox Wallet' && foxWalletAdapter) {
-        // Use Fox wallet adapter for transaction
-        addLog(`Creating Fox wallet transaction with inputs: ${JSON.stringify(inputs)}`);
-
-        const transaction = Transaction.createTransaction(
-          address,
-          DemoxWalletAdapterNetwork.Testnet,
-          programId,
-          functionName,
-          inputs,
-          fee,
-          false
-        );
-
-        const txId = await foxWalletAdapter.requestTransaction(transaction);
-        setLastTransactionId(txId);
-        addLog(`Fox wallet transaction created successfully with ID: ${txId}`);
-        return { transactionId: txId };
-      } else if (walletName === 'Soter Wallet' && soterWalletAdapter) {
-        // Use Soter wallet adapter for transaction
-        addLog(`Creating Soter wallet transaction with inputs: ${JSON.stringify(inputs)}`);
-
-        const transaction = Transaction.createTransaction(
-          address,
-          DemoxWalletAdapterNetwork.Testnet,
-          programId,
-          functionName,
-          inputs,
-          fee,
-          false
-        );
-
-        const txId = await soterWalletAdapter.requestTransaction(transaction);
-        setLastTransactionId(txId);
-        addLog(`Soter wallet transaction created successfully with ID: ${txId}`);
+        addLog(`${walletName} transaction created successfully with ID: ${txId}`);
         return { transactionId: txId };
       } else {
         const errorMsg = 'Transaction creation not supported for this wallet type';
@@ -633,10 +616,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return { error: errorMsg };
       }
     } catch (error: any) {
-      const errorMsg = error?.message || 'Unknown error creating transaction';
-      setErrorMessage(`Transaction error: ${errorMsg}`);
-      addLog(`Transaction creation error: ${errorMsg}`);
-      return { error: errorMsg };
+      return handleOperationError(error, 'Transaction');
     } finally {
       setTransactionPending(false);
     }
@@ -675,38 +655,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setLastSignature(signature);
         addLog(`Puzzle signature created successfully: ${signature}`);
         return { signature };
-      } else if (walletName === 'Leo Wallet' && leoWalletAdapter) {
-        // Use Leo wallet adapter for signature
-        addLog(`Requesting signature from Leo wallet`);
+      } else if ((walletName === 'Leo Wallet' && leoWalletAdapter) || 
+                 (walletName === 'Fox Wallet' && foxWalletAdapter) || 
+                 (walletName === 'Soter Wallet' && soterWalletAdapter)) {
+        // Common pattern for all wallet adapters
+        const adapter = walletName === 'Leo Wallet' ? leoWalletAdapter : 
+                       walletName === 'Fox Wallet' ? foxWalletAdapter : 
+                       soterWalletAdapter;
+        
+        addLog(`Requesting signature from ${walletName}`);
 
         const bytes = new TextEncoder().encode(message);
-        const signatureBytes = await leoWalletAdapter.signMessage(bytes);
+        const signatureBytes = await adapter!.signMessage(bytes);
         const signature = new TextDecoder().decode(signatureBytes);
         
         setLastSignature(signature);
-        addLog(`Leo wallet signature created successfully: ${signature}`);
-        return { signature };
-      } else if (walletName === 'Fox Wallet' && foxWalletAdapter) {
-        // Use Fox wallet adapter for signature
-        addLog(`Requesting signature from Fox wallet`);
-
-        const bytes = new TextEncoder().encode(message);
-        const signatureBytes = await foxWalletAdapter.signMessage(bytes);
-        const signature = new TextDecoder().decode(signatureBytes);
-        
-        setLastSignature(signature);
-        addLog(`Fox wallet signature created successfully: ${signature}`);
-        return { signature };
-      } else if (walletName === 'Soter Wallet' && soterWalletAdapter) {
-        // Use Soter wallet adapter for signature
-        addLog(`Requesting signature from Soter wallet`);
-
-        const bytes = new TextEncoder().encode(message);
-        const signatureBytes = await soterWalletAdapter.signMessage(bytes);
-        const signature = new TextDecoder().decode(signatureBytes);
-        
-        setLastSignature(signature);
-        addLog(`Soter wallet signature created successfully: ${signature}`);
+        addLog(`${walletName} signature created successfully: ${signature}`);
         return { signature };
       } else {
         const errorMsg = 'Message signing not supported for this wallet type';
@@ -715,10 +679,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return { error: errorMsg };
       }
     } catch (error: any) {
-      const errorMsg = error?.message || 'Unknown error signing message';
-      setErrorMessage(`Signature error: ${errorMsg}`);
-      addLog(`Message signing error: ${errorMsg}`);
-      return { error: errorMsg };
+      return handleOperationError(error, 'Signature');
     } finally {
       setSignaturePending(false);
     }
@@ -761,65 +722,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setLastDecryptedTexts(plaintexts);
         addLog(`Puzzle decryption successful for ${plaintexts.length} ciphertext(s)`);
         return { plaintexts };
-      } else if (walletName === 'Leo Wallet' && leoWalletAdapter) {
-        // Use Leo wallet adapter for decryption
-        addLog(`Requesting decryption from Leo wallet`);
-
+      } else if ((walletName === 'Leo Wallet' && leoWalletAdapter) || 
+                 (walletName === 'Fox Wallet' && foxWalletAdapter) || 
+                 (walletName === 'Soter Wallet' && soterWalletAdapter)) {
+        // Use adapter for decryption (common pattern for all adapters)
+        const adapter = walletName === 'Leo Wallet' ? leoWalletAdapter : 
+                        walletName === 'Fox Wallet' ? foxWalletAdapter : 
+                        soterWalletAdapter;
+        
+        addLog(`Requesting decryption from ${walletName}`);
+        
         const plaintexts: string[] = [];
         
-        // Leo wallet adapter only decrypts one ciphertext at a time
+        // Adapters only decrypt one ciphertext at a time
         for (const ciphertext of ciphertexts) {
           try {
-            const plaintext = await leoWalletAdapter.decrypt(ciphertext);
+            const plaintext = await adapter!.decrypt(ciphertext);
             plaintexts.push(plaintext);
           } catch (error: any) {
-            addLog(`Error decrypting ciphertext with Leo wallet: ${error.message || 'Unknown error'}`);
+            addLog(`Error decrypting ciphertext with ${walletName}: ${error.message || 'Unknown error'}`);
             throw error;
           }
         }
         
         setLastDecryptedTexts(plaintexts);
-        addLog(`Leo wallet decryption successful for ${plaintexts.length} ciphertext(s)`);
-        return { plaintexts };
-      } else if (walletName === 'Fox Wallet' && foxWalletAdapter) {
-        // Use Fox wallet adapter for decryption
-        addLog(`Requesting decryption from Fox wallet`);
-
-        const plaintexts: string[] = [];
-        
-        // Fox wallet adapter only decrypts one ciphertext at a time
-        for (const ciphertext of ciphertexts) {
-          try {
-            const plaintext = await foxWalletAdapter.decrypt(ciphertext);
-            plaintexts.push(plaintext);
-          } catch (error: any) {
-            addLog(`Error decrypting ciphertext with Fox wallet: ${error.message || 'Unknown error'}`);
-            throw error;
-          }
-        }
-        
-        setLastDecryptedTexts(plaintexts);
-        addLog(`Fox wallet decryption successful for ${plaintexts.length} ciphertext(s)`);
-        return { plaintexts };
-      } else if (walletName === 'Soter Wallet' && soterWalletAdapter) {
-        // Use Soter wallet adapter for decryption
-        addLog(`Requesting decryption from Soter wallet`);
-
-        const plaintexts: string[] = [];
-        
-        // Soter wallet adapter only decrypts one ciphertext at a time
-        for (const ciphertext of ciphertexts) {
-          try {
-            const plaintext = await soterWalletAdapter.decrypt(ciphertext);
-            plaintexts.push(plaintext);
-          } catch (error: any) {
-            addLog(`Error decrypting ciphertext with Soter wallet: ${error.message || 'Unknown error'}`);
-            throw error;
-          }
-        }
-        
-        setLastDecryptedTexts(plaintexts);
-        addLog(`Soter wallet decryption successful for ${plaintexts.length} ciphertext(s)`);
+        addLog(`${walletName} decryption successful for ${plaintexts.length} ciphertext(s)`);
         return { plaintexts };
       } else {
         const errorMsg = 'Decryption not supported for this wallet type';
@@ -828,10 +755,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return { error: errorMsg };
       }
     } catch (error: any) {
-      const errorMsg = error?.message || 'Unknown error decrypting message';
-      setErrorMessage(`Decryption error: ${errorMsg}`);
-      addLog(`Message decryption error: ${errorMsg}`);
-      return { error: errorMsg };
+      return handleOperationError(error, 'Decryption');
     } finally {
       setDecryptPending(false);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { RecordStatus, EventType } from '@puzzlehq/types';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Import wallet images
 import puzzleIcon from '../assets/puzzlewallet.png';
@@ -28,6 +29,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   defaultExpanded = false 
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const { isDarkMode } = useTheme();
   
   return (
     <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
@@ -40,7 +42,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           className={`w-5 h-5 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`} 
           fill="none" 
           viewBox="0 0 24 24" 
-          stroke="currentColor"
+          stroke={isDarkMode ? "currentColor" : "#374151"}
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -118,6 +120,7 @@ export function WalletDemo() {
     signaturePending,
     lastSignature,
     decryptPending,
+    lastDecryptedTexts,
     recordsLoading,
     lastRecords,
     recordPlaintextsLoading,
@@ -393,6 +396,7 @@ export function WalletDemo() {
           <p className="text-gray-700 dark:text-gray-300">
             <span className="font-semibold">Error:</span> {errorMessage || 'None'}
           </p>
+
           </div>
         </div>
         

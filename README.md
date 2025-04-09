@@ -2,18 +2,18 @@
 
 A modern, responsive React application template for integrating Aleo wallets into your dApp. This template provides a complete foundation for building decentralized applications on the Aleo blockchain with a focus on user experience and developer productivity.
 
-![Snark Collective](https://via.placeholder.com/800x400?text=Snark+Collective)
+## Features
 
-## 🚀 Features
-
-- **Multi-Wallet Support**: Seamlessly integrate with multiple Aleo wallets including Puzzle, Leo, Fox, and Soter
-- **Complete Transaction API**: Unified interface for creating transactions across all supported wallet types
-- **Modern UI/UX**: Clean, responsive design built with Tailwind CSS
-- **Dark Mode**: Built-in dark mode support with smooth transitions
+- **Multi-Wallet Support**: Integrate with multiple Aleo wallets including Puzzle, Leo, Fox, and Soter
+Note: Fox Wallet only supports Mainnet
+- **Complete Wallet API**: Unified interface for transactions, signatures, decryption, and record management
+- **Theme-Aware Design**: Dynamically changes logos and UI elements based on light/dark mode
+- **Modern UI/UX**: Responsive design built with Tailwind CSS
+- **Dark Mode**: Built-in dark mode support
 - **Wallet Context**: Centralized wallet state management with React Context
 - **TypeScript**: Full TypeScript support for better developer experience
-- **Vite**: Lightning-fast development and build times
-- **React 18**: Built on the latest React features
+- **Vite**
+- **React**
 
 ## 📋 Prerequisites
 
@@ -54,12 +54,18 @@ snarkcollective/
 ├── public/              # Static assets
 ├── src/
 │   ├── assets/          # Images and other assets
+│   │   ├── logo.png           # Logo for dark mode
+│   │   ├── logodark.png       # Logo for light mode
+│   │   ├── writing.png        # Text logo for dark mode
+│   │   ├── writingdark.png    # Text logo for light mode
+│   │   └── ... (wallet icons)
 │   ├── components/      # UI components
 │   │   ├── ConnectWallet.tsx  # Wallet connection component
-│   │   ├── Header.tsx         # Application header
+│   │   ├── Header.tsx         # Application header with theme-aware logos
 │   │   ├── Footer.tsx         # Application footer
 │   │   ├── Layout.tsx         # Main layout wrapper
-│   │   └── WalletDemo.tsx     # Demo of wallet integration
+│   │   ├── ThemeToggle.tsx    # Dark/light mode toggle
+│   │   └── WalletDemo.tsx     # Demo of wallet integration with expandable sections
 │   ├── contexts/        # React contexts
 │   │   ├── WalletContext.tsx  # Wallet state management
 │   │   └── ThemeContext.tsx   # Theme state management
@@ -81,7 +87,7 @@ The `WalletContext` provides a centralized way to manage wallet connections acro
 - Connection state tracking
 - Error handling
 - Wallet selection
-- Transaction creation with a unified API for all supported wallets
+- Transaction, signature, and record management with a unified API for all supported wallets
 
 ```tsx
 // Example usage in a component
@@ -95,7 +101,10 @@ function MyComponent() {
     walletName, 
     connectWallet, 
     disconnectWallet,
-    createTransaction 
+    createTransaction,
+    signMessage,
+    decryptMessage,
+    getRecords 
   } = useWallet();
   
   // Create a transaction that works with any supported wallet
@@ -113,6 +122,35 @@ function MyComponent() {
       }
     }
   };
+}
+```
+
+### ThemeContext
+
+The `ThemeContext` manages the application's theme state, providing automatic detection of system preferences and persistent theme selection:
+
+```tsx
+// Example usage
+import { useTheme } from '../contexts/ThemeContext';
+
+function MyComponent() {
+  const { theme, isDarkMode, toggleTheme } = useTheme();
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <button onClick={toggleTheme}>
+        Switch to {isDarkMode ? 'light' : 'dark'} mode
+      </button>
+      
+      {/* Conditional rendering based on theme */}
+      {isDarkMode ? (
+        <img src="/dark-logo.png" alt="Logo" />
+      ) : (
+        <img src="/light-logo.png" alt="Logo" />
+      )}
+    </div>
+  );
 }
 ```
 
@@ -143,17 +181,29 @@ function App() {
 
 ### WalletDemo Component
 
-The `WalletDemo` component showcases how to use the `WalletContext` to display wallet connection state and create transactions, including:
+The `WalletDemo` component showcases how to use the `WalletContext` with an expandable UI:
 
-- Connection status
-- Wallet information
-- Transaction creation demo for all supported wallets (Puzzle, Leo, Fox, Soter)
-- Error messages
+- Collapsible sections for different wallet operations
+- Connection status and wallet information
+- Transaction creation demo
+- Message signing
+- Decryption
+- Records management
+- Transaction history viewing
+- Error details
 - Connection logs
 
-This component serves as a reference implementation for how to consume the wallet context and create transactions in your application, regardless of the wallet type.
+This component serves as a reference implementation for a well-organized wallet interface that keeps functionality accessible while maintaining a clean UI.
 
 ## 🔧 Customization
+
+### Theming & Branding
+
+The template supports dynamic branding based on the user's theme preference:
+
+1. **Logo Switching**: Place your dark and light mode logo variants in the `assets` directory 
+2. **Theme Detection**: The app automatically detects user system preferences
+3. **Theme Toggle**: Users can manually switch between themes with the `ThemeToggle` component
 
 ### Styling
 
@@ -182,6 +232,14 @@ To add support for a new wallet:
 2. Add the wallet's icon to the `assets` directory
 3. Update the `ConnectWallet.tsx` component to include the new wallet option
 4. Implement transaction handling for the new wallet in the `createTransaction` method
+
+## 🧪 Optimizations
+
+The codebase includes several optimizations to improve maintainability and performance:
+
+1. **Consolidated Adapter Patterns**: Common patterns for wallet adapters are extracted to reduce code duplication
+2. **Centralized Error Handling**: Standardized error handling functions reduce duplication and ensure consistent behavior
+3. **Theme-Aware Components**: SVGs and images adapt to the current theme for better visibility
 
 ## 📚 Documentation
 
