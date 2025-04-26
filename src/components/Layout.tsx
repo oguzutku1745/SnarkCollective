@@ -8,10 +8,10 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="min-h-screen flex flex-col overflow-hidden app-gradient">
       <Header />
-      <main className="flex-grow pt-28 px-6 w-full">
-        <div className="w-full mx-auto" style={{ maxWidth: "calc(100% - 48px)" }}>
+      <main className="flex-grow pt-28 w-full">
+        <div className="w-full mx-auto">
           {children}
         </div>
       </main>
