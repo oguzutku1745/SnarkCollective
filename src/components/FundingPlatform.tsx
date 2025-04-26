@@ -85,7 +85,7 @@ const FundingPlatform: React.FC = () => {
       {/* Hero Section */}
       <div className="py-20 text-center px-4">
         <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-          <span className="bg-gradient-to-r from-indigo-600 to-blue-500 dark:from-indigo-400 dark:to-blue-300 text-transparent bg-clip-text">Funding</span> the <span className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-300 dark:to-indigo-400 text-transparent bg-clip-text">Future</span> <span className="bg-gradient-to-r from-indigo-600 to-blue-500 dark:from-indigo-400 dark:to-blue-300 text-transparent bg-clip-text">Together</span>
+          Funding the <span className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-300 dark:to-indigo-400 text-transparent bg-clip-text">Future</span> Together
         </h1>
         <p className="text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
           Discover and support innovative projects at the intersection of science and technology
