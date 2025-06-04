@@ -12,6 +12,7 @@
     "install-leo": "./install.sh"
   },
   "dependencies": {
+    "@doko-js/wasm": "^1.2.0",
     "@heroicons/react": "^2.2.0",
     "@provablehq/sdk": "^0.8.7",
     "@puzzlehq/sdk": "^1.0.3",

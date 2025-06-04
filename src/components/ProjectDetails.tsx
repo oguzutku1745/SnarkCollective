@@ -1,19 +1,206 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useParams, useNavigate } from 'react-router-dom';
-import { projectsData } from './projectsData';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ConnectWallet } from './ConnectWallet';
 import { useWallet } from '../contexts/WalletContext';
+import { useAleo } from '../contexts/AleoContext';
+
+// Define project data interface
+interface ProjectData {
+  projectKey: string; // Project key for URL (without 'field' suffix)
+  title: string;
+  description: string;
+  currentAmount: number;
+  targetAmount: number;
+  percentFunded: number;
+  creatorName: string;
+  creatorImage: string;
+  image: string;
+  contributors?: number;
+  daysLeft?: number;
+  overview?: string;
+  status?: string;
+  roundInfo?: string;
+  aleoInteractionKey?: string; // Full Aleo key with 'field' suffix for blockchain interactions
+  originalIndex?: number; // Original blockchain index
+}
+
+// Define blockchain project interface
+interface BlockchainProject {
+  project_owner: string;
+  project_details: {
+    title: string;
+    description: string;
+    img?: string;
+  };
+  collected_amount: number;
+  num_supporters: number;
+  joined_round: number;
+  is_approved: boolean;
+}
+
+// Define location state type
+interface LocationState {
+  projectData?: ProjectData;
+  fromHomepage?: boolean;
+}
 
 const ProjectDetails: React.FC = () => {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
-  const { projectId } = useParams<{ projectId: string }>();
+  const location = useLocation();
+  const { projectKey } = useParams<{ projectKey: string }>();
   const { connected } = useWallet();
-  const [donationAmount, setDonationAmount] = useState<string>('');
+  const { donateToProject, getProjectKey, currentRound, fetchCurrentRound, fetchAllProjects, isLoading, error } = useAleo();
   
-  // Find project by ID from URL parameter
-  const project = projectsData.find(p => p.id === Number(projectId));
+  // State for donation
+  const [donationAmount, setDonationAmount] = useState<string>('');
+  const [donationStatus, setDonationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [transactionError, setTransactionError] = useState<string | null>(null);
+  
+  // State for project data
+  const [project, setProject] = useState<ProjectData | null>(null);
+  const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false);
+  const [projectNotFound, setProjectNotFound] = useState<boolean>(false);
+  const [daysLeftInRound] = useState<number>(14); // Default days left
+  
+  // Refs to prevent multiple fetches
+  const hasFetchedRound = useRef<boolean>(false);
+  const hasInitializedProject = useRef<boolean>(false);
+
+  // Get location state
+  const locationState = location.state as LocationState;
+  const projectDataFromState = locationState?.projectData;
+  const fromHomepage = locationState?.fromHomepage;
+
+  // Fetch current round when component mounts (no wallet connection required for browsing)
+  useEffect(() => {
+    if (!currentRound && !hasFetchedRound.current) {
+      hasFetchedRound.current = true;
+      fetchCurrentRound();
+    }
+  }, [currentRound, fetchCurrentRound]);
+
+  // Initialize project data - either from state or fetch from chain
+  useEffect(() => {
+    if (hasInitializedProject.current) {
+      return;
+    }
+
+    if (!projectKey) {
+      setProjectNotFound(true);
+      return;
+    }
+
+    // Case 1: Project data passed from homepage
+    if (fromHomepage && projectDataFromState) {
+      setProject(projectDataFromState);
+      setProjectNotFound(false);
+      hasInitializedProject.current = true;
+      return;
+    }
+
+    // Case 2: Direct URL access - need to fetch from chain
+    if (!currentRound || isLoading) {
+      return;
+    }
+
+    if (hasInitializedProject.current) {
+      return; // Prevent multiple fetches
+    }
+
+    hasInitializedProject.current = true;
+    setIsLoadingProject(true);
+    setProjectNotFound(false);
+
+    fetchAllProjects(currentRound.round_id)
+      .then(async (allFetchedBlockchainProjects: BlockchainProject[]) => {
+        let foundProject: ProjectData | null = null;
+
+        // Search through all projects to find one that generates the matching project key
+        for (let arrayIndex = 0; arrayIndex < allFetchedBlockchainProjects.length; arrayIndex++) {
+          const blockchainProject = allFetchedBlockchainProjects[arrayIndex];
+          const projectIndex = arrayIndex + 1; // Project indices start from 1 in Aleo contract
+          
+          // Check basic validity first
+          const hasValidOwner = blockchainProject.project_owner && blockchainProject.project_owner.trim() !== '';
+          const hasValidTitle = blockchainProject.project_details?.title && blockchainProject.project_details.title.trim() !== '';
+          
+          if (!hasValidOwner || !hasValidTitle) {
+            continue;
+          }
+
+          // Generate the key for this project
+          const aleoKeyWithSuffix = await getProjectKey(currentRound.round_id, projectIndex);
+          if (!aleoKeyWithSuffix) {
+            console.error(`ProjectDetails: Failed to generate key for project at index ${projectIndex}`);
+            continue;
+          }
+
+          const urlKey = aleoKeyWithSuffix.replace(/field$/, '');
+
+          if (urlKey === projectKey) {
+            // Verify this is an approved project
+            if (!blockchainProject.is_approved) {
+              break; // Found but not approved
+            }
+
+            // Convert to UI format
+            const targetAmount = 10_000_000;
+            const percentFunded = Math.min(
+              Math.round((blockchainProject.collected_amount / targetAmount) * 100),
+              100
+            );
+
+            foundProject = {
+              projectKey: projectKey,
+              title: blockchainProject.project_details.title,
+              description: blockchainProject.project_details.description,
+              image: blockchainProject.project_details.img || '',
+              currentAmount: blockchainProject.collected_amount,
+              targetAmount: targetAmount,
+              percentFunded: percentFunded,
+              contributors: blockchainProject.num_supporters,
+              daysLeft: currentRound.is_active ? daysLeftInRound : 0,
+              creatorName: `${blockchainProject.project_owner.substring(0, 6)}...${blockchainProject.project_owner.substring(blockchainProject.project_owner.length - 4)}`,
+              creatorImage: '',
+              overview: blockchainProject.project_details.description,
+              status: blockchainProject.is_approved ? 'Approved' : 'Pending',
+              roundInfo: `Round #${blockchainProject.joined_round}`,
+              aleoInteractionKey: aleoKeyWithSuffix,
+              originalIndex: projectIndex
+            };
+
+            break;
+          }
+        }
+
+        if (foundProject) {
+          setProject(foundProject);
+          setProjectNotFound(false);
+        } else {
+          setProject(null);
+          setProjectNotFound(true);
+        }
+      })
+      .catch((fetchError: any) => {
+        console.error('Error fetching projects from chain:', fetchError);
+        setProjectNotFound(true);
+      })
+      .finally(() => {
+        setIsLoadingProject(false);
+      });
+
+  }, [
+    projectKey,
+    fromHomepage,
+    projectDataFromState,
+    currentRound,
+    isLoading,
+    fetchAllProjects,
+    getProjectKey,
+    daysLeftInRound
+  ]);
   
   // Handle back button click
   const handleBackClick = () => {
@@ -21,15 +208,57 @@ const ProjectDetails: React.FC = () => {
   };
   
   // Handle donation submission
-  const handleDonate = () => {
-    // Here you would call your donation function
-    console.log(`Donating ${donationAmount} Aleo credits to project ${projectId}`);
-    // Reset the input field after donation
-    setDonationAmount('');
-    // Display success message or redirect
+  const handleDonate = async () => {
+    if (!connected || !currentRound) {
+      setTransactionError('Please connect your wallet first');
+      return;
+    }
+
+    if (!donationAmount || parseFloat(donationAmount) <= 0) {
+      setTransactionError('Please enter a valid amount');
+      return;
+    }
+
+    if (!project?.aleoInteractionKey) {
+      setTransactionError('Aleo interaction key not available for this project');
+      return;
+    }
+
+    setDonationStatus('loading');
+    setTransactionError(null);
+
+    try {
+      const success = await donateToProject(project.aleoInteractionKey, parseFloat(donationAmount) * 1_000_000);
+      
+      if (success) {
+        setDonationStatus('success');
+        setDonationAmount('');
+        setTimeout(() => {
+          setDonationStatus('idle');
+        }, 3000);
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (err: any) {
+      setDonationStatus('error');
+      setTransactionError(err.message || 'Failed to process donation');
+    }
   };
   
-  if (!project) {
+  // Show loading state
+  if (isLoading || isLoadingProject) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading project details...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show project not found state
+  if (projectNotFound || !project) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -55,6 +284,7 @@ const ProjectDetails: React.FC = () => {
             src={project.image} 
             alt={project.title} 
             className="w-full h-full object-cover"
+            crossOrigin="anonymous"
           />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 py-16">
@@ -78,15 +308,14 @@ const ProjectDetails: React.FC = () => {
               <h1 className="text-4xl font-bold text-white mb-4">{project.title}</h1>
               <p className="text-lg text-blue-100 mb-6">{project.description}</p>
 
-
               <div className="flex items-center">
                 <img 
                   src={project.creatorImage} 
                   alt={project.creatorName} 
                   className="w-10 h-10 rounded-full mr-3 border-2 border-white"
+                  crossOrigin="anonymous"
                 />
                 <div>
-                  <span className="block text-blue-100 text-sm">Lead Researcher at Quantum Labs</span>
                   <span className="text-white font-medium">{project.creatorName}</span>
                 </div>
               </div>
@@ -138,38 +367,7 @@ const ProjectDetails: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Project Overview</h2>
               <p className="text-gray-700 dark:text-gray-300 mb-6">{project.overview}</p>
-              
-              {project.keyInnovations && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Key Innovations</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-                    {project.keyInnovations.map((innovation, index) => (
-                      <li key={index}>{innovation}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {project.researchProgress && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Research Progress</h3>
-                  <p className="text-gray-700 dark:text-gray-300">{project.researchProgress}</p>
-                </div>
-              )}
-              
-              {project.impactAndApplications && (
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Impact & Applications</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-                    {project.impactAndApplications.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
-            
-            {/* Add additional sections here if needed */}
           </div>
           
           {/* Right Column: Support This Project */}
@@ -208,6 +406,7 @@ const ProjectDetails: React.FC = () => {
                             onChange={(e) => setDonationAmount(e.target.value)}
                             className="block w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder="Enter amount"
+                            disabled={donationStatus === 'loading'}
                           />
                           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                             <span className="text-gray-500 dark:text-gray-400">ALEO</span>
@@ -226,23 +425,61 @@ const ProjectDetails: React.FC = () => {
                     )}
                   </div>
                   
+                  {/* Donation Status Message */}
+                  {transactionError && (
+                    <div className="text-red-500 text-sm mb-2">
+                      {transactionError}
+                    </div>
+                  )}
+                  
+                  {donationStatus === 'success' && (
+                    <div className="text-green-500 text-sm mb-2">
+                      Donation successful! Thank you for your support.
+                    </div>
+                  )}
+
+                  {isLoading && (
+                    <div className="text-blue-500 text-sm mb-2">
+                      Loading round information...
+                    </div>
+                  )}
+                  
                   {/* Donate Button (only shown when connected) */}
                   {connected && (
                     <div className="mt-2">
                       <button
                         onClick={handleDonate}
-                        disabled={!donationAmount || parseFloat(donationAmount) <= 0}
+                        disabled={!donationAmount || parseFloat(donationAmount) <= 0 || donationStatus === 'loading' || !currentRound?.is_active}
                         className={`w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center ${
-                          !donationAmount || parseFloat(donationAmount) <= 0
+                          !donationAmount || parseFloat(donationAmount) <= 0 || donationStatus === 'loading' || !currentRound?.is_active
                             ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                             : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                         }`}
                       >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Donate Now
+                        {donationStatus === 'loading' ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Donate Now
+                          </>
+                        )}
                       </button>
+                    </div>
+                  )}
+                  
+                  {/* Round status message */}
+                  {connected && currentRound && !currentRound.is_active && (
+                    <div className="text-amber-500 text-sm mt-2">
+                      Note: The current funding round is not active. Donations are temporarily paused.
                     </div>
                   )}
                 </div>

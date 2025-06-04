@@ -319,3 +319,20 @@ html.dark body {
 
 /* Already have dark theme styles from media query, but keep them here
    for explicit theme switch control rather than just system preference */
+
+/* Custom utility classes */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
