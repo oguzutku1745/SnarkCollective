@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "webpack",
+    "build": "vite build",
     "dev-webpack": "webpack serve",
-    "build:vite": "vite build",
+    "build:webpack": "webpack",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "install-leo": "./install.sh"
